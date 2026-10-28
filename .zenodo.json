@@ -1,0 +1,13 @@
+{
+  "title": "NEXR HCD Coach",
+  "upload_type": "software",
+  "description": "A phase-aware, self-hostable coaching chatbot for nurse educators designing XR/VR learning exercises, grounded in the NEXR Human-Centred Design Model (HCDM). Code under MIT, content under CC BY 4.0. Co-funded by the European Union (project TODO-PROJECT-NUMBER).",
+  "creators": [
+    { "name": "Tegelbeckers, Hannes", "affiliation": "Otto von Guericke University Magdeburg" }
+  ],
+  "license": "MIT",
+  "keywords": ["human-centred design", "nursing education", "virtual reality", "extended reality", "retrieval-augmented generation"],
+  "access_right": "open",
+  "language": "eng",
+  "notes": "Views and opinions expressed are those of the author(s) only and do not necessarily reflect those of the European Union or the granting authority."
+}

@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software or its content, please cite it as below."
+title: "NEXR HCD Coach"
+abstract: "A phase-aware, self-hostable coaching chatbot for nurse educators designing XR/VR learning exercises, grounded in the NEXR Human-Centred Design Model."
+type: software
+authors:
+  - family-names: Tegelbeckers
+    given-names: Hannes
+    affiliation: "Otto von Guericke University Magdeburg"
+  # TODO: add consortium authors
+license: MIT
+repository-code: "https://github.com/OVGU-VET-TechEd/nexr-hcd-coach"
+version: 0.1.0
+date-released: 2026-10-28
+keywords:
+  - human-centred design
+  - nursing education
+  - virtual reality
+  - extended reality
+  - retrieval-augmented generation
+# identifiers:
+#   - type: doi
+#     value: 10.5281/zenodo.TODO

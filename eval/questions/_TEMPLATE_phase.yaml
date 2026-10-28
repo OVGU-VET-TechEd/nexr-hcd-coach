@@ -1,0 +1,11 @@
+# Copy to P1.yaml, P2.yaml, … and write 30–50 items per phase.
+# Suggested mix per phase:
+#   ~40% "what do I do in this step" · ~20% methods/resources · ~15% learner involvement
+#   ~15% "I'm stuck or skipped something" (prerequisites) · ~10% edge cases
+# Spread items across EN/ES/DE/FI/NL; ask native speakers to write them, not translations.
+phase: P1
+items:
+  - id: P1-01
+    lang: en
+    question: "TODO: a realistic question from a nurse educator in this phase"
+    expect: "TODO: what a good answer does, and which IDs it should cite (e.g. P1.2, IM-03)"

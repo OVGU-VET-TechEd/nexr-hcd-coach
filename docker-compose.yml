@@ -1,0 +1,126 @@
+name: nexr-coach
+
+# Default stack: Ollama (LLM + embeddings) + Open WebUI (UI, RAG, built-in Chroma).
+#   docker compose up -d                                   # start
+#   docker compose --profile setup run --rm bootstrap      # load content + create the coach
+#   docker compose --profile eval run --rm eval            # run the test questions
+# NVIDIA GPU: add -f docker-compose.gpu.yml. Qdrant / pgvector: add --profile qdrant|pgvector
+# and set VECTOR_DB in .env.
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_TAG:-0.9.6}
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: pulls the chat and embedding models into the ollama volume.
+  ollama-pull:
+    image: ollama/ollama:${OLLAMA_TAG:-0.9.6}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_PULL_MODELS: ${OLLAMA_PULL_MODELS:-gemma3:12b bge-m3}
+    entrypoint: ["/bin/sh", "-c", "for m in $${OLLAMA_PULL_MODELS}; do ollama pull $$m || exit 1; done"]
+    restart: "no"
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG:-v0.6.18}
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "${WEBUI_BIND:-127.0.0.1}:${WEBUI_PORT:-3000}:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      WEBUI_NAME: ${WEBUI_NAME:-NEXR HCD Coach}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in .env}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-true}
+      DEFAULT_USER_ROLE: ${DEFAULT_USER_ROLE:-pending}
+      DEFAULT_MODELS: ${NEXR_MODEL_ID:-nexr-coach}
+      # Chat model backends
+      OLLAMA_BASE_URL: http://ollama:11434
+      ENABLE_OPENAI_API: ${ENABLE_OPENAI_API:-false}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Retrieval
+      RAG_EMBEDDING_ENGINE: ollama
+      RAG_EMBEDDING_MODEL: ${EMBEDDING_MODEL:-bge-m3}
+      RAG_OLLAMA_BASE_URL: http://ollama:11434
+      VECTOR_DB: ${VECTOR_DB:-chroma}
+      QDRANT_URI: ${QDRANT_URI:-http://qdrant:6333}
+      PGVECTOR_DB_URL: ${PGVECTOR_DB_URL:-postgresql://nexr:nexr@pgvector:5432/nexr}
+      CHUNK_SIZE: ${CHUNK_SIZE:-1200}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-150}
+      RAG_TOP_K: ${RAG_TOP_K:-6}
+      # Privacy defaults
+      USER_PERMISSIONS_CHAT_FILE_UPLOAD: ${ALLOW_FILE_UPLOADS:-false}
+      ENABLE_COMMUNITY_SHARING: "false"
+      ANONYMIZED_TELEMETRY: "false"
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+
+  qdrant:
+    image: qdrant/qdrant:${QDRANT_TAG:-v1.13.4}
+    profiles: [qdrant]
+    restart: unless-stopped
+    volumes:
+      - qdrant:/qdrant/storage
+
+  pgvector:
+    image: pgvector/pgvector:${PGVECTOR_TAG:-pg16}
+    profiles: [pgvector]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexr
+      POSTGRES_PASSWORD: nexr
+      POSTGRES_DB: nexr
+    volumes:
+      - pgvector:/var/lib/postgresql/data
+
+  # Loads content/ into Open WebUI knowledge collections and (re)creates the coach preset.
+  bootstrap:
+    image: python:3.12-slim
+    profiles: [setup]
+    depends_on:
+      - open-webui
+    working_dir: /nexr
+    volumes:
+      - ./:/nexr:ro
+    environment: &client-env
+      WEBUI_URL: http://open-webui:8080
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      NEXR_MODEL_ID: ${NEXR_MODEL_ID:-nexr-coach}
+      NEXR_MODEL_NAME: ${NEXR_MODEL_NAME:-NEXR HCD Coach}
+      BASE_MODEL: ${BASE_MODEL:-gemma3:12b}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.3}
+      NUM_CTX: ${NUM_CTX:-8192}
+    command: ["sh", "-c", "pip install -q --root-user-action=ignore -r scripts/requirements.txt && python scripts/bootstrap.py"]
+
+  eval:
+    image: python:3.12-slim
+    profiles: [eval]
+    depends_on:
+      - open-webui
+    working_dir: /nexr
+    volumes:
+      - ./:/nexr:ro
+      - ./eval/results:/nexr/eval/results
+    environment: *client-env
+    command: ["sh", "-c", "pip install -q --root-user-action=ignore -r scripts/requirements.txt && python eval/run_eval.py"]
+
+volumes:
+  ollama:
+  open-webui:
+  qdrant:
+  pgvector:

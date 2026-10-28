@@ -1,0 +1,13 @@
+# NVIDIA GPU override (requires the NVIDIA Container Toolkit):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# macOS: Docker cannot use Apple GPUs. Run Ollama natively instead and point
+# OLLAMA_BASE_URL / RAG_OLLAMA_BASE_URL at http://host.docker.internal:11434.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
